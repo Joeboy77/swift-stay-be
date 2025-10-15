@@ -90,6 +90,11 @@ async function startServer() {
   try {
     await AppDataSource.initialize();
     console.log('✅ Database connected successfully');
+    if (process.env.NODE_ENV === 'production') {
+      console.log('⚙️  Running pending migrations...');
+      await AppDataSource.runMigrations();
+      console.log('✅ Migrations completed');
+    }
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);

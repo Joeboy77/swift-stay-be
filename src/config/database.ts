@@ -22,7 +22,8 @@ if (isProduction) {
   dbConfig = {
     type: 'postgres',
     url: process.env.DATABASE_URL,
-    synchronize: false, // Never auto-sync in production
+    synchronize: true, // Never auto-sync in production
+    migrationsRun: true, // Automatically run pending migrations on startup
     logging: false,
     ssl: {
       rejectUnauthorized: false,
