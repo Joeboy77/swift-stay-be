@@ -6,6 +6,13 @@ export interface EmailVerificationData {
   verificationCode: string;
 }
 
+export interface OwnerApplicationStatusEmailData {
+  email: string;
+  fullName: string;
+  propertyName: string;
+  status: 'approved' | 'rejected' | string;
+}
+
 class EmailService {
   private mailjet: Mailjet;
   private fromEmail: string;
@@ -62,6 +69,72 @@ class EmailService {
       console.error('❌ [EMAIL] Failed to send verification email:', error);
       return false;
     }
+  }
+
+  async sendOwnerApplicationStatusEmail(data: OwnerApplicationStatusEmailData): Promise<boolean> {
+    try {
+      const isApproved = String(data.status).toLowerCase() === 'approved';
+      const subject = isApproved
+        ? 'Swift Stay Partner Application Approved'
+        : 'Swift Stay Partner Application Update';
+      const html = isApproved
+        ? this.getOwnerApplicationApprovedTemplate(data)
+        : this.getOwnerApplicationRejectedTemplate(data);
+
+      const request = this.mailjet.post('send', { version: 'v3.1' }).request({
+        Messages: [
+          {
+            From: { Email: this.fromEmail, Name: this.fromName },
+            To: [{ Email: data.email, Name: data.fullName }],
+            Subject: subject,
+            HTMLPart: html,
+          },
+        ],
+      });
+
+      const response = await request;
+      console.log('✅ [EMAIL] Owner application status email sent:', response.body);
+      return true;
+    } catch (error) {
+      console.error('❌ [EMAIL] Failed to send owner application status email:', error);
+      return false;
+    }
+  }
+
+  private getOwnerApplicationApprovedTemplate(data: OwnerApplicationStatusEmailData): string {
+    return `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #111827;"> 
+        <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;">
+          <div style="background: linear-gradient(135deg,#22c55e,#06b6d4); padding: 24px; color: white;">
+            <h2 style="margin: 0;">Swift Stay</h2>
+          </div>
+          <div style="padding: 28px;">
+            <p>Hi <strong>${data.fullName}</strong>,</p>
+            <p>Great news! Your partner application for <strong>${data.propertyName}</strong> has been <strong>approved</strong>.</p>
+            <p>Our team will reach out shortly with next steps to help you list and manage your property on Swift Stay.</p>
+            <p style="margin-top: 24px; color: #6b7280; font-size: 14px;">Thank you for partnering with us.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private getOwnerApplicationRejectedTemplate(data: OwnerApplicationStatusEmailData): string {
+    return `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #111827;"> 
+        <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow: hidden;">
+          <div style="background: linear-gradient(135deg,#ef4444,#f59e0b); padding: 24px; color: white;">
+            <h2 style="margin: 0;">Swift Stay</h2>
+          </div>
+          <div style="padding: 28px;">
+            <p>Hi <strong>${data.fullName}</strong>,</p>
+            <p>Thank you for your interest in partnering with Swift Stay. After careful review, your application for <strong>${data.propertyName}</strong> was not approved at this time.</p>
+            <p>You can reply to this email for feedback or reapply in the future with updated details. We appreciate your time.</p>
+            <p style="margin-top: 24px; color: #6b7280; font-size: 14px;">Best regards, The Swift Stay Team</p>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   private getVerificationEmailTemplate(data: EmailVerificationData): string {

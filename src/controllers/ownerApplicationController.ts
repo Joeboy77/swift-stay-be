@@ -1,19 +1,20 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
 import { OwnerApplication, ApplicationStatus } from '../models/OwnerApplication';
+import emailService from '../services/emailService';
 
 export class OwnerApplicationController {
   static async submit(req: Request, res: Response) {
     try {
       const { fullName, email, phone, propertyName, city, region, propertyType, unitsAvailable, message } = req.body;
-      if (!fullName || !email || !propertyName || !city || !region) {
-        return res.status(400).json({ success: false, message: 'Missing required fields' });
+      if (!fullName || !email || !phone || !propertyName || !city || !region) {
+        return res.status(400).json({ success: false, message: 'Missing required fields (fullName, email, phone, propertyName, city, region)' });
       }
       const repo = AppDataSource.getRepository(OwnerApplication);
       const app = repo.create({
         fullName,
         email: String(email).toLowerCase(),
-        phone: phone || null,
+        phone: String(phone),
         propertyName,
         city,
         region,
@@ -58,6 +59,19 @@ export class OwnerApplicationController {
       if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
       app.status = status;
       await repo.save(app);
+      // Send notification emails on approval/rejection
+      try {
+        if (status === ApplicationStatus.APPROVED || status === ApplicationStatus.REJECTED) {
+          await emailService.sendOwnerApplicationStatusEmail({
+            email: app.email,
+            fullName: app.fullName,
+            propertyName: app.propertyName,
+            status
+          });
+        }
+      } catch (e) {
+        console.error('[OWNER APPLICATION] Failed to send status email:', e);
+      }
       return res.json({ success: true, message: 'Status updated', data: app });
     } catch (error) {
       console.error('[OWNER APPLICATION] Update status error:', error);
