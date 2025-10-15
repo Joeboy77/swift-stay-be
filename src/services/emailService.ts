@@ -71,7 +71,7 @@ class EmailService {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Verify Your HosFind Account</title>
+          <title>Verify Your Swift Stay Account</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -149,13 +149,13 @@ class EmailService {
         <body>
           <div class="container">
                 <div class="header">
-                  <div class="logo">🏨 MyHostel</div>
+                  <div class="logo">Swift Stay</div>
                   <h1 class="title">Verify Your Account</h1>
                 </div>
 
                 <p>Hello <strong>${data.fullName}</strong>,</p>
 
-                <p>Welcome to MyHostel! To complete your account setup, please verify your email address using the verification code below:</p>
+                <p>Welcome to Swift Stay! To complete your account setup, please verify your email address using the verification code below:</p>
             
             <div class="verification-code">
               <div class="code">${data.verificationCode}</div>
@@ -164,7 +164,7 @@ class EmailService {
                 <div class="instructions">
                   <strong>Instructions:</strong>
                   <ul>
-                    <li>Enter this 4-digit code in the MyHostel app</li>
+                    <li>Enter this 4-digit code in the Swift Stay app</li>
                     <li>The code will expire in 10 minutes</li>
                     <li>If you didn't create an account, please ignore this email</li>
                   </ul>
@@ -173,7 +173,7 @@ class EmailService {
             <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
             
             <div class="footer">
-              <p>Best regards,<br>The MyHostel Team</p>
+              <p>Best regards,<br>The Swift Stay Team</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
           </div>
@@ -184,7 +184,7 @@ class EmailService {
 
   private getVerificationEmailText(data: EmailVerificationData): string {
     return `
-      MyHostel - Verify Your Account
+      Swift Stay - Verify Your Account
 
       Hello ${data.fullName},
 
