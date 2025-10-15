@@ -96,10 +96,10 @@ export class BookingController {
 
       // Capacity check removed - no longer tracking guests
 
-      // Calculate total amount with 5% service charge
-      const roomPrice = roomType.price;
-      const serviceCharge = roomPrice * 0.05; // 5% service charge
-      const totalAmount = roomPrice + serviceCharge;
+      // Calculate total amount with 5% service charge (force numeric and 2dp)
+      const roomPrice = Number(roomType.price);
+      const serviceCharge = Number((roomPrice * 0.05).toFixed(2)); // 5% service charge
+      const totalAmount = Number((roomPrice + serviceCharge).toFixed(2));
 
       // Create booking
       const booking = new Booking();
