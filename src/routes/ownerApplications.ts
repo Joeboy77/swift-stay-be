@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { OwnerApplicationController } from '../controllers/ownerApplicationController';
-import { adminAuth } from '../middleware/adminAuth';
+import { authenticateAdmin, requireAdminRole } from '../middleware/adminAuth';
 
 const router = Router();
 
@@ -8,8 +8,8 @@ const router = Router();
 router.post('/submit', OwnerApplicationController.submit);
 
 // Admin endpoints
-router.get('/', adminAuth, OwnerApplicationController.list);
-router.patch('/:id/status', adminAuth, OwnerApplicationController.updateStatus);
+router.get('/', authenticateAdmin, requireAdminRole(), OwnerApplicationController.list);
+router.patch('/:id/status', authenticateAdmin, requireAdminRole(), OwnerApplicationController.updateStatus);
 
 export default router;
 
