@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/database';
+import { Admin, AdminRole } from './models/Admin';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import authRoutes from './routes/auth';
@@ -90,7 +91,31 @@ async function startServer() {
   try {
     await AppDataSource.initialize();
     console.log('✅ Database connected successfully');
-    // Migrations are intentionally not executed on startup. Schema is managed via synchronize in config.
+    // Ensure a default admin exists in production
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const adminRepository = AppDataSource.getRepository(Admin);
+        const adminEmail = (process.env.ADMIN_EMAIL || 'admin@hosfind.com').toLowerCase();
+        const existingAdmin = await adminRepository.findOne({ where: { email: adminEmail } });
+        if (!existingAdmin) {
+          const password = process.env.ADMIN_PASSWORD || 'admin123456';
+          const fullName = process.env.ADMIN_FULL_NAME || 'Administrator';
+          const newAdmin = adminRepository.create({
+            email: adminEmail,
+            password,
+            fullName,
+            role: AdminRole.ADMIN,
+            isActive: true,
+          });
+          await adminRepository.save(newAdmin);
+          console.log('👤 Default admin created:', adminEmail);
+        } else {
+          console.log('👤 Admin exists:', adminEmail);
+        }
+      } catch (seedErr) {
+        console.error('⚠️  Failed to ensure default admin:', seedErr);
+      }
+    }
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
