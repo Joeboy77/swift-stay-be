@@ -14,6 +14,8 @@ A comprehensive backend API for the HosFind hostel finding application, built wi
 - **Validation**: Request validation using express-validator
 - **Error Handling**: Centralized error handling with custom error classes
 
+//
+
 ## Admin API Endpoints
 
 ### Authentication
