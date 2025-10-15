@@ -35,7 +35,7 @@ if (isProduction) {
         require: true
       }
     },
-    entities: [User, Admin, Category, Property, RoomType, Like, Notification, RegionalSection, Booking, Transfer],
+    entities: [User, Admin, Category, Property, RoomType, Like, Notification, RegionalSection, Booking, Transfer, require('../models/OwnerApplication').OwnerApplication],
     migrations: ['dist/migrations/*.js'], // Use compiled JS files in production
     subscribers: ['dist/subscribers/*.js'], // Use compiled JS files in production
   };
@@ -54,7 +54,7 @@ if (isProduction) {
     synchronize: true, // Auto-sync in development
     logging: true,
     ssl: false,
-    entities: [User, Admin, Category, Property, RoomType, Like, Notification, RegionalSection, Booking, Transfer],
+    entities: [User, Admin, Category, Property, RoomType, Like, Notification, RegionalSection, Booking, Transfer, require('../models/OwnerApplication').OwnerApplication],
     migrations: ['src/migrations/*.ts'], // Use TypeScript files in development
     subscribers: ['src/subscribers/*.ts'], // Use TypeScript files in development
   };
