@@ -201,6 +201,8 @@ export const contentController = {
         location: req.body.location,
         city: req.body.city,
         region: req.body.region,
+        latitude: req.body.latitude ? parseFloat(req.body.latitude) : null,
+        longitude: req.body.longitude ? parseFloat(req.body.longitude) : null,
         price: parseFloat(req.body.price),
         currency: req.body.currency || '₵',
         rating: parseFloat(req.body.rating) || 0,
@@ -303,6 +305,8 @@ export const contentController = {
       if (req.body.location) property.location = req.body.location;
       if (req.body.city) property.city = req.body.city;
       if (req.body.region) property.region = req.body.region;
+      if (req.body.latitude !== undefined) property.latitude = req.body.latitude ? parseFloat(req.body.latitude) : null;
+      if (req.body.longitude !== undefined) property.longitude = req.body.longitude ? parseFloat(req.body.longitude) : null;
       if (req.body.price) property.price = parseFloat(req.body.price);
       if (req.body.currency) property.currency = req.body.currency;
       if (req.body.rating) property.rating = parseFloat(req.body.rating);
