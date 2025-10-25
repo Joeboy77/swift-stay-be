@@ -438,7 +438,9 @@ export class BookingController {
         confirmedBookings,
         pendingBookings,
         cancelledBookings,
-        totalRevenue
+        totalRevenue,
+        totalBaseAmount,
+        totalCommissionAmount
       ] = await Promise.all([
         bookingRepository.count(),
         bookingRepository.count({ where: { status: BookingStatus.CONFIRMED } }),
@@ -447,6 +449,16 @@ export class BookingController {
         bookingRepository
           .createQueryBuilder('booking')
           .select('SUM(CAST(booking.totalAmount AS DECIMAL))', 'total')
+          .where('booking.status = :status', { status: BookingStatus.CONFIRMED })
+          .getRawOne(),
+        bookingRepository
+          .createQueryBuilder('booking')
+          .select('SUM(CAST(booking.baseAmount AS DECIMAL))', 'total')
+          .where('booking.status = :status', { status: BookingStatus.CONFIRMED })
+          .getRawOne(),
+        bookingRepository
+          .createQueryBuilder('booking')
+          .select('SUM(CAST(booking.commissionAmount AS DECIMAL))', 'total')
           .where('booking.status = :status', { status: BookingStatus.CONFIRMED })
           .getRawOne()
       ]);
@@ -459,6 +471,8 @@ export class BookingController {
           pendingBookings,
           cancelledBookings,
           totalRevenue: totalRevenue?.total || '0',
+          totalBaseAmount: totalBaseAmount?.total || '0',
+          totalCommissionAmount: totalCommissionAmount?.total || '0',
         },
       });
     } catch (error) {
