@@ -9,6 +9,144 @@ export class PaymentController {
   /**
    * Initialize payment for a booking
    */
+  static async initializeRemainingPayment(req: Request, res: Response) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: errors.array(),
+        });
+      }
+
+      const { bookingId, email } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+      }
+
+      if (!bookingId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Booking ID is required',
+        });
+      }
+
+      // Get booking details
+      const bookingRepository = AppDataSource.getRepository(Booking);
+      const userRepository = AppDataSource.getRepository(User);
+
+      const booking = await bookingRepository.findOne({
+        where: { id: bookingId, userId },
+        relations: ['user', 'property', 'roomType'],
+      });
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          message: 'Booking not found',
+        });
+      }
+
+      // Check if this is a partial payment booking with remaining amount
+      if (booking.paymentType !== 'partial' || !booking.amountRemaining || booking.amountRemaining <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No remaining amount to pay for this booking',
+        });
+      }
+
+      // Get user details
+      const user = await userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      // Convert remaining amount to kobo (Paystack expects amount in smallest currency unit)
+      const amountInKobo = Math.round(booking.amountRemaining * 100);
+
+      // Generate unique reference
+      const reference = `hosfind_remaining_${bookingId}_${Date.now()}`;
+
+      // Initialize payment with Paystack
+      console.log('💳 [PAYMENT] Initializing remaining payment with data:', {
+        email: email || user.email,
+        amount: amountInKobo,
+        currency: 'GHS',
+        reference,
+        bookingId: booking.id,
+        remainingAmount: booking.amountRemaining,
+        totalAmount: booking.totalAmount
+      });
+
+      const paymentResult = await paymentService.initializePayment({
+        email: email || user.email,
+        amount: amountInKobo,
+        currency: 'GHS',
+        reference,
+        callback_url: `${process.env.FRONTEND_URL}/payment/callback`,
+        metadata: {
+          bookingId: booking.id,
+          userId: user.id,
+          propertyName: booking.property?.name,
+          roomTypeName: booking.roomType?.name,
+          paymentType: 'remaining',
+        },
+      });
+
+      console.log('💳 [PAYMENT] Payment result:', JSON.stringify(paymentResult, null, 2));
+
+      if (!paymentResult.success) {
+        console.error('💳 [PAYMENT] Payment initialization failed:', paymentResult);
+        return res.status(400).json({
+          success: false,
+          message: paymentResult.message || 'Payment initialization failed',
+        });
+      }
+
+      if (!paymentResult.data?.authorization_url) {
+        console.error('💳 [PAYMENT] No authorization URL in response:', paymentResult);
+        return res.status(400).json({
+          success: false,
+          message: 'Payment initialization failed - no authorization URL received',
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Payment initialized successfully',
+        data: {
+          authorizationUrl: paymentResult.data.authorization_url,
+          accessCode: paymentResult.data.access_code,
+          reference: paymentResult.data.reference,
+          booking: {
+            id: booking.id,
+            totalAmount: booking.totalAmount,
+            remainingAmount: booking.amountRemaining,
+            currency: booking.currency,
+            propertyName: booking.property?.name,
+            roomTypeName: booking.roomType?.name,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('💳 [PAYMENT] Error initializing remaining payment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
   static async initializePayment(req: Request, res: Response) {
     try {
       const errors = validationResult(req);

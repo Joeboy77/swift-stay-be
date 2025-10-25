@@ -18,6 +18,7 @@ const initializePaymentValidation = [
 
 // Routes
 router.post('/initialize', logRequest, authenticateUser, initializePaymentValidation, PaymentController.initializePayment);
+router.post('/initialize-remaining', logRequest, authenticateUser, initializePaymentValidation, PaymentController.initializeRemainingPayment);
 router.get('/verify/:reference', logRequest, authenticateUser, PaymentController.verifyPayment);
 router.get('/public-key', logRequest, PaymentController.getPublicKey);
 router.post('/webhook', logRequest, PaymentController.handleWebhook);
