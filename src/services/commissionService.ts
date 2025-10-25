@@ -1,4 +1,4 @@
-import AppDataSource from '../config/data-source';
+import { AppDataSource } from '../config/database';
 import { CommissionSettings } from '../models/CommissionSettings';
 
 export class CommissionService {
