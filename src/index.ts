@@ -17,6 +17,7 @@ import notificationRoutes from './routes/notifications';
 import bookingRoutes from './routes/booking';
 import paymentRoutes from './routes/payment';
 import ownerApplicationRoutes from './routes/ownerApplications';
+import commissionRoutes from './routes/commission';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -87,6 +88,7 @@ app.use('/api/content/notifications', notificationRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/owner-applications', ownerApplicationRoutes);
+app.use('/api/commission', commissionRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 async function startServer() {

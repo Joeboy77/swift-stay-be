@@ -11,6 +11,7 @@ import fs from 'fs';
 import { NotificationController } from './notificationController';
 import { PushNotificationService } from '../services/pushNotificationService';
 import { NotificationType } from '../models/Notification';
+import { commissionService } from '../services/commissionService';
 export const contentController = {
   async createCategory(req: Request, res: Response, next: NextFunction) {
     try {
@@ -617,10 +618,18 @@ export const contentController = {
         return next(error);
       }
 
+      // Get current commission percentage
+      const commissionPercentage = await commissionService.getCommissionPercentage();
+      const basePrice = parseFloat(req.body.price);
+      const commissionBreakdown = commissionService.calculateCommission(basePrice, commissionPercentage);
+
       const roomType = roomTypeRepository.create({
         name: req.body.name,
         description: req.body.description,
-        price: parseFloat(req.body.price),
+        price: commissionBreakdown.totalAmount, // Total price including commission
+        basePrice: commissionBreakdown.baseAmount,
+        commissionAmount: commissionBreakdown.commissionAmount,
+        totalPrice: commissionBreakdown.totalAmount,
         currency: req.body.currency || '₵',
         genderType: req.body.genderType || 'any',
         capacity: parseInt(req.body.capacity) || 1,
@@ -659,7 +668,17 @@ export const contentController = {
 
       if (req.body.name) roomType.name = req.body.name;
       if (req.body.description !== undefined) roomType.description = req.body.description;
-      if (req.body.price) roomType.price = parseFloat(req.body.price);
+      if (req.body.price) {
+        // Get current commission percentage and recalculate
+        const commissionPercentage = await commissionService.getCommissionPercentage();
+        const basePrice = parseFloat(req.body.price);
+        const commissionBreakdown = commissionService.calculateCommission(basePrice, commissionPercentage);
+        
+        roomType.price = commissionBreakdown.totalAmount;
+        roomType.basePrice = commissionBreakdown.baseAmount;
+        roomType.commissionAmount = commissionBreakdown.commissionAmount;
+        roomType.totalPrice = commissionBreakdown.totalAmount;
+      }
       if (req.body.currency) roomType.currency = req.body.currency;
       if (req.body.genderType) roomType.genderType = req.body.genderType;
       if (req.body.capacity) roomType.capacity = parseInt(req.body.capacity);

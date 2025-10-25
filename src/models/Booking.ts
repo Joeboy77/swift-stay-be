@@ -10,6 +10,11 @@ export enum BookingStatus {
   COMPLETED = 'completed',
 }
 
+export enum PaymentType {
+  FULL = 'full',
+  PARTIAL = 'partial',
+}
+
 @Entity('bookings')
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
@@ -53,6 +58,26 @@ export class Booking {
   @Column({ type: 'boolean', default: false })
   isPaid: boolean;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Base room price before commission' })
+  baseAmount: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Commission amount' })
+  commissionAmount: number;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentType,
+    default: PaymentType.FULL,
+    comment: 'Payment type: full or partial (40%)'
+  })
+  paymentType: PaymentType;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Amount already paid by user' })
+  amountPaid: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Amount remaining to be paid' })
+  amountRemaining: number;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -86,6 +111,11 @@ export class Booking {
       status: this.status,
       paymentReference: this.paymentReference,
       isPaid: this.isPaid,
+      baseAmount: this.baseAmount,
+      commissionAmount: this.commissionAmount,
+      paymentType: this.paymentType,
+      amountPaid: this.amountPaid,
+      amountRemaining: this.amountRemaining,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       // Include relations if they exist

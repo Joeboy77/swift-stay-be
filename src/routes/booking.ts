@@ -16,6 +16,7 @@ const createBookingValidation = [
   body('propertyId').isUUID().withMessage('Valid property ID is required'),
   body('roomTypeId').isUUID().withMessage('Valid room type ID is required'),
   body('checkInDate').isISO8601().withMessage('Valid check-in date is required'),
+  body('paymentType').optional().isIn(['full', 'partial']).withMessage('Payment type must be either full or partial'),
   // checkOutDate, guests, and specialRequests removed (no longer required)
 ];
 
@@ -31,6 +32,7 @@ router.get('/user/:userId', logRequest, authenticateUser, BookingController.getU
 router.get('/:id', logRequest, authenticateUser, BookingController.getBookingById);
 router.patch('/:id/status', logRequest, authenticateUser, updateBookingStatusValidation, BookingController.updateBookingStatus);
 router.patch('/:id/cancel', logRequest, authenticateUser, BookingController.cancelBooking);
+router.post('/:bookingId/pay-remaining', logRequest, authenticateUser, BookingController.payRemainingAmount);
 
 // Admin routes
 router.get('/admin/all', logRequest, authenticateAdmin, BookingController.getAllBookings);

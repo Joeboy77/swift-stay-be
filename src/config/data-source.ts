@@ -7,6 +7,9 @@ import { RoomType } from '../models/RoomType';
 import { Like } from '../models/Like';
 import { Notification } from '../models/Notification';
 import { RegionalSection } from '../models/RegionalSection';
+import { Booking } from '../models/Booking';
+import { Transfer } from '../models/Transfer';
+import { CommissionSettings } from '../models/CommissionSettings';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -20,7 +23,7 @@ if (isProduction) {
   dbConfig = {
     type: 'postgres',
     url: process.env.DATABASE_URL,
-    synchronize: false,
+    synchronize: true,
     logging: true,
     ssl: {
       rejectUnauthorized: false,
@@ -32,7 +35,7 @@ if (isProduction) {
         require: true
       }
     },
-    entities: [User, Admin, Category, Property, RoomType, Like, Notification],
+    entities: [User, Admin, Category, Property, RoomType, Like, Notification, RegionalSection, Booking, Transfer, CommissionSettings],
     migrations: ['dist/migrations/*.js'], // Use compiled JS files in production
     subscribers: ['dist/subscribers/*.js'], // Use compiled JS files in production
   };
@@ -45,10 +48,10 @@ if (isProduction) {
     username: process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
     database: process.env.DB_NAME || 'hosfind',
-    synchronize: false,
+    synchronize: true,
     logging: true,
     ssl: false,
-    entities: [User, Admin, Category, Property, RoomType, Like, Notification],
+    entities: [User, Admin, Category, Property, RoomType, Like, Notification, RegionalSection, Booking, Transfer, CommissionSettings],
     migrations: ['src/migrations/*.ts'], // Use TypeScript files in development
     subscribers: ['src/subscribers/*.ts'], // Use TypeScript files in development
   };

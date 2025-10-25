@@ -51,6 +51,15 @@ export class RoomType {
   @IsPositive({ message: 'Price must be positive' })
   price: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Base price before commission' })
+  basePrice: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Commission amount' })
+  commissionAmount: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00, comment: 'Total price including commission' })
+  totalPrice: number;
+
   @Column({ type: 'varchar', length: 10, default: '₵' })
   currency: string;
 
@@ -111,6 +120,9 @@ export class RoomType {
       name: this.name,
       description: this.description,
       price: this.price,
+      basePrice: this.basePrice,
+      commissionAmount: this.commissionAmount,
+      totalPrice: this.totalPrice,
       currency: this.currency,
       billingPeriod: this.billingPeriod,
       genderType: this.genderType,

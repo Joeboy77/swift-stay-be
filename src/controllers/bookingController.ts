@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
-import { Booking, BookingStatus } from '../models/Booking';
+import { Booking, BookingStatus, PaymentType } from '../models/Booking';
 import { User } from '../models/User';
 import { Property } from '../models/Property';
 import { RoomType } from '../models/RoomType';
 import { body, validationResult } from 'express-validator';
+import { commissionService } from '../services/commissionService';
 
 export class BookingController {
   // Create a new booking
@@ -23,7 +24,8 @@ export class BookingController {
         userId, 
         propertyId, 
         roomTypeId, 
-        checkInDate 
+        checkInDate,
+        paymentType = 'full' // 'full' or 'partial'
       } = req.body;
 
       // Validate dates
@@ -96,10 +98,25 @@ export class BookingController {
 
       // Capacity check removed - no longer tracking guests
 
-      // Calculate total amount with 5% service charge (force numeric and 2dp)
-      const roomPrice = Number(roomType.price);
-      const serviceCharge = Number((roomPrice * 0.05).toFixed(2)); // 5% service charge
-      const totalAmount = Number((roomPrice + serviceCharge).toFixed(2));
+      // Get current commission percentage
+      const commissionPercentage = await commissionService.getCommissionPercentage();
+      
+      // Calculate amounts with commission
+      const baseAmount = Number(roomType.basePrice || roomType.price);
+      const commissionBreakdown = commissionService.calculateCommission(baseAmount, commissionPercentage);
+      const paymentBreakdown = commissionService.calculatePartialPayment(commissionBreakdown.totalAmount);
+
+      // Determine payment amounts based on payment type
+      let amountPaid = 0;
+      let amountRemaining = 0;
+      
+      if (paymentType === 'partial') {
+        amountPaid = paymentBreakdown.partialAmount;
+        amountRemaining = paymentBreakdown.remainingAmount;
+      } else {
+        amountPaid = commissionBreakdown.totalAmount;
+        amountRemaining = 0;
+      }
 
       // Create booking
       const booking = new Booking();
@@ -107,8 +124,12 @@ export class BookingController {
       booking.propertyId = propertyId;
       booking.roomTypeId = roomTypeId;
       booking.checkInDate = checkInDate;
-      // checkout, guests, and specialRequests removed
-      booking.totalAmount = totalAmount;
+      booking.totalAmount = commissionBreakdown.totalAmount;
+      booking.baseAmount = commissionBreakdown.baseAmount;
+      booking.commissionAmount = commissionBreakdown.commissionAmount;
+      booking.paymentType = paymentType as PaymentType;
+      booking.amountPaid = amountPaid;
+      booking.amountRemaining = amountRemaining;
       booking.currency = roomType.currency || 'GHS';
       booking.status = BookingStatus.PENDING;
 
@@ -446,6 +467,71 @@ export class BookingController {
         success: false,
         message: 'Failed to fetch booking statistics',
         error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  // Pay remaining amount for partial bookings
+  static async payRemainingAmount(req: Request, res: Response) {
+    try {
+      const { bookingId } = req.params;
+      const { paymentReference } = req.body;
+
+      const bookingRepository = AppDataSource.getRepository(Booking);
+
+      // Find the booking
+      const booking = await bookingRepository.findOne({
+        where: { id: bookingId },
+        relations: ['user', 'property', 'roomType']
+      });
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          message: 'Booking not found'
+        });
+      }
+
+      // Check if booking is partial and has remaining amount
+      if (booking.paymentType !== PaymentType.PARTIAL) {
+        return res.status(400).json({
+          success: false,
+          message: 'This booking is not a partial payment booking'
+        });
+      }
+
+      if (booking.amountRemaining <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No remaining amount to pay for this booking'
+        });
+      }
+
+      // Update booking with remaining payment
+      booking.amountPaid = booking.totalAmount;
+      booking.amountRemaining = 0;
+      booking.paymentReference = paymentReference || booking.paymentReference;
+      booking.isPaid = true;
+
+      await bookingRepository.save(booking);
+
+      // Return updated booking
+      const updatedBooking = await bookingRepository.findOne({
+        where: { id: bookingId },
+        relations: ['user', 'property', 'roomType']
+      });
+
+      res.json({
+        success: true,
+        message: 'Remaining amount paid successfully',
+        data: updatedBooking
+      });
+    } catch (error) {
+      console.error('Error paying remaining amount:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process remaining payment',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
