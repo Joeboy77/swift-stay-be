@@ -14,6 +14,12 @@ class PaymentService {
       ? process.env.PAYSTACK_SECRET_KEY_TEST 
       : process.env.PAYSTACK_SECRET_KEY_LIVE;
 
+    console.log('💳 [PAYMENT SERVICE] Initializing with:', {
+      isTestMode: this.isTestMode,
+      hasSecretKey: !!secretKey,
+      secretKeyPrefix: secretKey ? secretKey.substring(0, 10) + '...' : 'none'
+    });
+
     if (!secretKey) {
       throw new Error('Paystack secret key not found in environment variables');
     }
@@ -33,6 +39,15 @@ class PaymentService {
     metadata?: any;
   }) {
     try {
+      console.log('💳 [PAYMENT SERVICE] Initializing payment with Paystack:', {
+        email: data.email,
+        amount: data.amount,
+        currency: data.currency || 'GHS',
+        reference: data.reference,
+        callback_url: data.callback_url,
+        metadata: data.metadata
+      });
+
       const response = await this.paystack.transaction.initialize({
         email: data.email,
         amount: data.amount,
@@ -42,13 +57,24 @@ class PaymentService {
         metadata: data.metadata,
       });
 
+      console.log('💳 [PAYMENT SERVICE] Paystack response:', JSON.stringify(response, null, 2));
+
+      if (!response || !response.data) {
+        console.error('💳 [PAYMENT SERVICE] Invalid Paystack response:', response);
+        return {
+          success: false,
+          message: 'Invalid response from payment provider',
+          error: 'No data in payment response',
+        };
+      }
+
       return {
         success: true,
         data: response.data,
         message: 'Payment initialized successfully',
       };
     } catch (error) {
-      console.error('Error initializing payment:', error);
+      console.error('💳 [PAYMENT SERVICE] Error initializing payment:', error);
       return {
         success: false,
         message: 'Failed to initialize payment',

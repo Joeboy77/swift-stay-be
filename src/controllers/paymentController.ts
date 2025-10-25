@@ -30,6 +30,13 @@ export class PaymentController {
         });
       }
 
+      if (!bookingId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Booking ID is required',
+        });
+      }
+
       // Get booking details
       const bookingRepository = AppDataSource.getRepository(Booking);
       const userRepository = AppDataSource.getRepository(User);
@@ -62,6 +69,15 @@ export class PaymentController {
       const reference = `hosfind_${bookingId}_${Date.now()}`;
 
       // Initialize payment with Paystack
+      console.log('💳 [PAYMENT] Initializing payment with data:', {
+        email: email || user.email,
+        amount: amountInKobo,
+        currency: 'GHS',
+        reference,
+        bookingId: booking.id,
+        totalAmount: booking.totalAmount
+      });
+
       const paymentResult = await paymentService.initializePayment({
         email: email || user.email,
         amount: amountInKobo,
@@ -76,17 +92,40 @@ export class PaymentController {
         },
       });
 
+      console.log('💳 [PAYMENT] Payment result:', JSON.stringify(paymentResult, null, 2));
+
       if (!paymentResult.success) {
+        console.error('💳 [PAYMENT] Payment initialization failed:', paymentResult);
         return res.status(400).json({
           success: false,
-          message: paymentResult.message,
+          message: paymentResult.message || 'Payment initialization failed',
           error: paymentResult.error,
+        });
+      }
+
+      if (!paymentResult.data) {
+        console.error('💳 [PAYMENT] No data in payment result:', paymentResult);
+        return res.status(500).json({
+          success: false,
+          message: 'Payment service returned no data',
+          error: 'Invalid payment service response',
+        });
+      }
+
+      if (!paymentResult.data.authorization_url) {
+        console.error('💳 [PAYMENT] No authorization_url in payment result:', paymentResult.data);
+        return res.status(500).json({
+          success: false,
+          message: 'Payment service did not return authorization URL',
+          error: 'Invalid payment service response structure',
         });
       }
 
       // Update booking with payment reference
       booking.paymentReference = reference;
       await bookingRepository.save(booking);
+
+      console.log('💳 [PAYMENT] Payment initialized successfully for booking:', booking.id);
 
       res.json({
         success: true,
