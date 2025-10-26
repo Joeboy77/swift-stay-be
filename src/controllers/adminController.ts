@@ -6,6 +6,7 @@ import { Category } from '../models/Category';
 import { RoomType } from '../models/RoomType';
 import { User } from '../models/User';
 import { Like } from '../models/Like';
+import { Booking } from '../models/Booking';
 import { Notification, NotificationType } from '../models/Notification';
 import { NotificationController } from './notificationController';
 import { PushNotificationService } from '../services/pushNotificationService';
@@ -306,6 +307,9 @@ export class AdminController {
       }
 
       const userRepository = AppDataSource.getRepository(User);
+      const notificationRepository = AppDataSource.getRepository(Notification);
+      const likeRepository = AppDataSource.getRepository(Like);
+      
       const user = await userRepository.findOne({ where: { id: userId } });
 
       if (!user) {
@@ -313,7 +317,23 @@ export class AdminController {
         return;
       }
 
+      // Delete all notifications associated with this user first
+      await notificationRepository.delete({ userId: userId });
+      console.log(`Deleted notifications for user ${userId}`);
+
+      // Delete all likes associated with this user
+      await likeRepository.delete({ userId: userId });
+      console.log(`Deleted likes for user ${userId}`);
+
+      // Note: Bookings should cascade delete automatically due to onDelete: 'CASCADE'
+      // But let's also explicitly delete them to be safe
+      const bookingRepository = AppDataSource.getRepository(Booking);
+      await bookingRepository.delete({ userId: userId });
+      console.log(`Deleted bookings for user ${userId}`);
+
+      // Now delete the user
       await userRepository.remove(user);
+      console.log(`Successfully deleted user ${userId}`);
 
       res.json({
         success: true,
