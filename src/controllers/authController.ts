@@ -88,17 +88,42 @@ export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const userRepository = AppDataSource.getRepository(User);
-      const user = await userRepository.findOne({
-        where: { phoneNumber: req.body.phoneNumber }
-      });
+      const { phoneNumber, email, password } = req.body;
+      
+      // Validate input - either phoneNumber or email must be provided
+      if (!phoneNumber && !email) {
+        const error = new Error('Phone number or email is required') as AppError;
+        error.statusCode = 400;
+        return next(error);
+      }
+      
+      if (!password) {
+        const error = new Error('Password is required') as AppError;
+        error.statusCode = 400;
+        return next(error);
+      }
+      
+      // Find user by phone number or email
+      let user: User | null = null;
+      if (phoneNumber) {
+        user = await userRepository.findOne({
+          where: { phoneNumber: phoneNumber }
+        });
+      } else if (email) {
+        user = await userRepository.findOne({
+          where: { email: email.toLowerCase() }
+        });
+      }
+      
       if (!user) {
-        const error = new Error('Invalid phone number or password') as AppError;
+        const error = new Error('Invalid credentials') as AppError;
         error.statusCode = 401;
         return next(error);
       }
-      const isValidPassword = await user.comparePassword(req.body.password);
+      
+      const isValidPassword = await user.comparePassword(password);
       if (!isValidPassword) {
-        const error = new Error('Invalid phone number or password') as AppError;
+        const error = new Error('Invalid credentials') as AppError;
         error.statusCode = 401;
         return next(error);
       }
