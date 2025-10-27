@@ -158,7 +158,7 @@ export class PaymentController {
         });
       }
 
-      const { bookingId, email } = req.body;
+      const { bookingId, email, paymentIntent } = req.body;
       const userId = (req as any).user?.id;
 
       if (!userId) {
@@ -200,13 +200,13 @@ export class PaymentController {
         });
       }
 
-      // Determine payment amount based on payment type
+      // Determine payment amount based on payment intent
       let paymentAmount: number;
-      if (booking.paymentType === 'partial') {
-        // For partial payments, calculate 40% of total amount
+      if (paymentIntent === 'partial') {
+        // User wants to pay partial amount (40%)
         paymentAmount = booking.totalAmount * 0.4;
       } else {
-        // For full payments, use the total amount
+        // User wants to pay full amount (default)
         paymentAmount = booking.totalAmount;
       }
 
@@ -223,7 +223,7 @@ export class PaymentController {
         currency: 'GHS',
         reference,
         bookingId: booking.id,
-        paymentType: booking.paymentType,
+        paymentIntent: paymentIntent || 'full',
         paymentAmount: paymentAmount,
         totalAmount: booking.totalAmount,
         amountPaid: booking.amountPaid,
