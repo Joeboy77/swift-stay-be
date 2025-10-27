@@ -200,8 +200,18 @@ export class PaymentController {
         });
       }
 
+      // Determine payment amount based on payment type
+      let paymentAmount: number;
+      if (booking.paymentType === 'partial') {
+        // For partial payments, use the amount that should be paid now (40%)
+        paymentAmount = booking.amountPaid || 0;
+      } else {
+        // For full payments, use the total amount
+        paymentAmount = booking.totalAmount;
+      }
+
       // Convert amount to kobo (Paystack expects amount in smallest currency unit)
-      const amountInKobo = Math.round(booking.totalAmount * 100);
+      const amountInKobo = Math.round(paymentAmount * 100);
 
       // Generate unique reference
       const reference = `hosfind_${bookingId}_${Date.now()}`;
@@ -213,7 +223,11 @@ export class PaymentController {
         currency: 'GHS',
         reference,
         bookingId: booking.id,
-        totalAmount: booking.totalAmount
+        paymentType: booking.paymentType,
+        paymentAmount: paymentAmount,
+        totalAmount: booking.totalAmount,
+        amountPaid: booking.amountPaid,
+        amountRemaining: booking.amountRemaining
       });
 
       const paymentResult = await paymentService.initializePayment({
