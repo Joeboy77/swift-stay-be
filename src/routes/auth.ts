@@ -31,7 +31,7 @@ const signupValidation = [
     .withMessage('Location must be between 2 and 100 characters')
 ];
 const loginValidation = [
-  image.png  body('password')
+  body('password')
     .notEmpty()
     .withMessage('Password is required'),
   body()
