@@ -107,15 +107,16 @@ export class BookingController {
       const paymentBreakdown = commissionService.calculatePartialPayment(commissionBreakdown.totalAmount);
 
       // Determine payment amounts based on payment type
-      let amountPaid = 0;
+      let amountPaid = 0; // Always start with 0 - no payment made yet
       let amountRemaining = 0;
       
       if (paymentType === 'partial') {
-        amountPaid = paymentBreakdown.partialAmount;
-        amountRemaining = paymentBreakdown.remainingAmount;
+        // For partial payments, amountPaid stays 0 until payment is verified
+        // amountRemaining is the total amount that needs to be paid
+        amountRemaining = commissionBreakdown.totalAmount;
       } else {
-        amountPaid = commissionBreakdown.totalAmount;
-        amountRemaining = 0;
+        // For full payments, amountRemaining is the total amount that needs to be paid
+        amountRemaining = commissionBreakdown.totalAmount;
       }
 
       // Create booking

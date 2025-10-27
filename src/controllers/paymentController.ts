@@ -203,8 +203,8 @@ export class PaymentController {
       // Determine payment amount based on payment type
       let paymentAmount: number;
       if (booking.paymentType === 'partial') {
-        // For partial payments, use the amount that should be paid now (40%)
-        paymentAmount = booking.amountPaid || 0;
+        // For partial payments, calculate 40% of total amount
+        paymentAmount = booking.totalAmount * 0.4;
       } else {
         // For full payments, use the total amount
         paymentAmount = booking.totalAmount;
@@ -349,9 +349,35 @@ export class PaymentController {
 
       // Check if payment was successful
       if (paymentData.status === 'success') {
-        // Update booking status
-        booking.status = BookingStatus.CONFIRMED;
-        booking.isPaid = true;
+        // Check if this is a remaining payment (reference starts with 'hosfind_remaining_')
+        const isRemainingPayment = paymentData.reference.startsWith('hosfind_remaining_');
+        
+        if (isRemainingPayment && booking.paymentType === 'partial') {
+          // This is a remaining payment for a partial booking
+          booking.amountPaid = booking.totalAmount; // Now fully paid
+          booking.amountRemaining = 0; // No remaining amount
+          booking.status = BookingStatus.CONFIRMED;
+          booking.isPaid = true; // Fully paid now
+        } else if (booking.paymentType === 'partial') {
+          // This is the initial partial payment
+          const partialAmount = booking.totalAmount * 0.4;
+          const remainingAmount = booking.totalAmount * 0.6;
+          
+          booking.amountPaid = partialAmount;
+          booking.amountRemaining = remainingAmount;
+          booking.status = BookingStatus.CONFIRMED; // Partial payment confirmed
+          booking.isPaid = false; // Not fully paid yet
+        } else {
+          // This is a full payment
+          booking.amountPaid = booking.totalAmount;
+          booking.amountRemaining = 0;
+          booking.status = BookingStatus.CONFIRMED;
+          booking.isPaid = true; // Fully paid
+        }
+        
+        // Set payment reference
+        booking.paymentReference = paymentData.reference;
+        
         await bookingRepository.save(booking);
 
         res.json({
