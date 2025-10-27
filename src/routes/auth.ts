@@ -31,12 +31,20 @@ const signupValidation = [
     .withMessage('Location must be between 2 and 100 characters')
 ];
 const loginValidation = [
-  body('phoneNumber')
+  image.png  body('password')
     .notEmpty()
-    .withMessage('Phone number is required'),
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required')
+    .withMessage('Password is required'),
+  body()
+    .custom((value, { req }) => {
+      const { phoneNumber, email } = req.body;
+      if (!phoneNumber && !email) {
+        throw new Error('Either phone number or email is required');
+      }
+      if (phoneNumber && email) {
+        throw new Error('Please provide either phone number or email, not both');
+      }
+      return true;
+    })
 ];
 
 const verifyEmailValidation = [
