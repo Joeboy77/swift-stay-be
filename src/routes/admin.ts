@@ -25,6 +25,7 @@ router.post('/test', logRequest, (req: Request, res: Response) => {
   res.json({ message: 'Admin test route working', body: req.body });
 });
 router.get('/dashboard', logRequest, authenticateAdmin, AdminController.getDashboardStats);
+router.get('/reports/property-earnings', logRequest, authenticateAdmin, requireAdminRole(), AdminController.getPropertyEarningsReport);
 router.get('/users', logRequest, authenticateAdmin, requireAdminRole(), AdminController.getAllUsers);
 router.get('/users/stats', logRequest, authenticateAdmin, requireAdminRole(), AdminController.getUserStats);
 router.get('/users/:userId', logRequest, authenticateAdmin, requireAdminRole(), AdminController.getUserDetails);

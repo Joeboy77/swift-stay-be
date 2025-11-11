@@ -6,7 +6,7 @@ import { Category } from '../models/Category';
 import { RoomType } from '../models/RoomType';
 import { User } from '../models/User';
 import { Like } from '../models/Like';
-import { Booking } from '../models/Booking';
+import { Booking, BookingStatus } from '../models/Booking';
 import { Notification, NotificationType } from '../models/Notification';
 import { NotificationController } from './notificationController';
 import { PushNotificationService } from '../services/pushNotificationService';
@@ -1935,6 +1935,131 @@ export class AdminController {
         success: false,
         message: "Failed to assign property to regional section",
         error: error.message
+      });
+    }
+  }
+
+  static async getPropertyEarningsReport(req: AdminRequest, res: Response): Promise<void> {
+    try {
+      const { period, propertyId } = req.query;
+      const bookingRepository = AppDataSource.getRepository(Booking);
+      const propertyRepository = AppDataSource.getRepository(Property);
+
+      // Validate period
+      const validPeriods = ['daily', 'weekly', 'monthly', 'yearly'];
+      if (!period || !validPeriods.includes(period as string)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid period. Must be one of: daily, weekly, monthly, yearly'
+        });
+        return;
+      }
+
+      // Calculate date range based on period
+      const now = new Date();
+      let startDate: Date;
+      let dateFormat: string;
+      let groupByFormat: string;
+
+      switch (period) {
+        case 'daily':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          dateFormat = 'YYYY-MM-DD';
+          groupByFormat = 'DATE(booking.createdAt)';
+          break;
+        case 'weekly':
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - 7);
+          dateFormat = 'YYYY-MM-DD';
+          groupByFormat = 'DATE(booking.createdAt)';
+          break;
+        case 'monthly':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          dateFormat = 'YYYY-MM';
+          groupByFormat = "TO_CHAR(booking.createdAt, 'YYYY-MM')";
+          break;
+        case 'yearly':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          dateFormat = 'YYYY';
+          groupByFormat = "TO_CHAR(booking.createdAt, 'YYYY')";
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          dateFormat = 'YYYY-MM';
+          groupByFormat = "TO_CHAR(booking.createdAt, 'YYYY-MM')";
+      }
+
+      // Build query
+      let query = bookingRepository
+        .createQueryBuilder('booking')
+        .leftJoinAndSelect('booking.property', 'property')
+        .select('property.id', 'propertyId')
+        .addSelect('property.name', 'propertyName')
+        .addSelect('property.location', 'propertyLocation')
+        .addSelect('property.city', 'propertyCity')
+        .addSelect(`COUNT(booking.id)`, 'totalBookings')
+        .addSelect(`SUM(CAST(booking.baseAmount AS DECIMAL))`, 'totalEarnings')
+        .addSelect(`SUM(CAST(booking.commissionAmount AS DECIMAL))`, 'totalCommission')
+        .addSelect(`SUM(CAST(booking.totalAmount AS DECIMAL))`, 'totalRevenue')
+        .where('booking.status = :status', { status: BookingStatus.CONFIRMED })
+        .andWhere('booking.createdAt >= :startDate', { startDate })
+        .groupBy('property.id')
+        .addGroupBy('property.name')
+        .addGroupBy('property.location')
+        .addGroupBy('property.city')
+        .orderBy('totalEarnings', 'DESC');
+
+      // Filter by property if specified
+      if (propertyId) {
+        query = query.andWhere('property.id = :propertyId', { propertyId });
+      }
+
+      const results = await query.getRawMany();
+
+      // Format results
+      const formattedResults = results.map((row: any) => ({
+        propertyId: row.propertyId,
+        propertyName: row.propertyName,
+        propertyLocation: row.propertyLocation,
+        propertyCity: row.propertyCity,
+        totalBookings: parseInt(row.totalBookings) || 0,
+        totalEarnings: parseFloat(row.totalEarnings) || 0,
+        totalCommission: parseFloat(row.totalCommission) || 0,
+        totalRevenue: parseFloat(row.totalRevenue) || 0,
+      }));
+
+      // Calculate totals
+      const totals = formattedResults.reduce(
+        (acc, curr) => ({
+          totalBookings: acc.totalBookings + curr.totalBookings,
+          totalEarnings: acc.totalEarnings + curr.totalEarnings,
+          totalCommission: acc.totalCommission + curr.totalCommission,
+          totalRevenue: acc.totalRevenue + curr.totalRevenue,
+        }),
+        {
+          totalBookings: 0,
+          totalEarnings: 0,
+          totalCommission: 0,
+          totalRevenue: 0,
+        }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          period,
+          startDate: startDate.toISOString(),
+          endDate: now.toISOString(),
+          properties: formattedResults,
+          totals,
+        },
+      });
+    } catch (error) {
+      console.error('Error generating property earnings report:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate property earnings report',
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }
