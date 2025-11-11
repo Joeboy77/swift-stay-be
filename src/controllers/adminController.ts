@@ -2007,7 +2007,8 @@ export class AdminController {
         .addGroupBy('property.name')
         .addGroupBy('property.location')
         .addGroupBy('property.city')
-        .orderBy('totalEarnings', 'DESC');
+        // Order by the aggregate expression to avoid alias quoting issues in Postgres
+        .orderBy('SUM(CAST(booking.baseAmount AS DECIMAL))', 'DESC');
 
       // Filter by property if specified
       if (propertyId) {
